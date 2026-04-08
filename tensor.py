@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-
+from scipy.linalg import pinv
 df = pd.read_csv("cfs.csv") # reads the file
 #print(df.shape)
 #print(df.head())
@@ -87,7 +87,7 @@ for k,row in df.iterrows():
     T[ia,ib,k] += cf12_34
     T[ib,ia,k] += cf12_34
     T[ic,id,k] += cf12_34
-    T[ic,id,k] += cf12_34
+    T[id,ic,k] += cf12_34
 
     T[ia,ic,k] += cf13_24
     T[ic,ia,k] += cf13_24
@@ -99,5 +99,97 @@ for k,row in df.iterrows():
     T[ib,ic,k] += cf14_23
     T[ic,ib,k] += cf14_23
 
-    print("Quartet:", a, b, c, d)
-    print(T[:, :, k])
+    #print("Quartet:", a, b, c, d)
+    #print(T[:, :, k])
+print("Tensor shape:", T.shape)
+
+# Step 1 - Collapsing the tensor across the quartet dimension to get a single adjacency matrix W
+# Sum across all quartet layers to get total pairwise support
+W = np.sum(T, axis=2)   # shape: (n, n)
+ 
+print("Step 1 - Collapsed adjacency matrix W (sum across all quartet layers)")
+print("Shape:", W.shape)
+print(W)
+
+# Step 2 - Compute the Laplacian matrix L from W and D \
+# D is a diagonal matrix where D[i,i] = sum of all edge weights connected to node i
+D = np.diag(np.sum(W, axis=1))  # Degree matrix 
+L = D - W  # Unnormalized Laplacian
+print("Step 2 - Graph Laplacian L = D - W")
+print("Degree matrix diagonal:", np.diag(D))
+print("Laplacian: ")
+print(np.round(L, 4))
+
+# Step 3 - Computing the effective resistance matrix R from L
+# The effective resistance between nodes i and j is:
+#   R[i,j] = L_pinv[i,i] + L_pinv[j,j] - 2 * L_pinv[i,j]
+# where L_pinv is the pseudoinverse of the Laplacian
+L_pinv = pinv(L) 
+R = np.zeros((n, n))
+for i in range(n):
+    for j in range(i+1, n):
+        R[i,j] = L_pinv[i,i] + L_pinv[j,j] - 2 * L_pinv[i,j]
+        R[j,i] = R[i,j]  # symmetric
+ 
+print("Step 3 — Effective resistance matrix R")
+print(np.round(R, 4))
+
+# Step 4 - Compute edge sampling probabilities
+# p[i,j] is proportional to w[i,j] * R[i,j]
+# Edges that are both heavy AND structurally important get high probability
+scores = W * R 
+
+# Normalize so probabilities sum to 1 (only upper triangle to avoid double-counting)
+total_score = 0
+edge_list = []
+for i in range(n):
+    for j in range(i+1, n):
+        if W[i,j] > 0:
+            total_score += scores[i,j]
+            edge_list.append((i, j, W[i,j], R[i,j], scores[i,j]))
+
+# Add normalized probability to each edge
+for idx in range(len(edge_list)):
+    i, j, w, r, s = edge_list[idx]
+    prob = s / total_score
+    edge_list[idx] = (i, j, w, r, s, prob)
+
+print("Step 4 - Edge sampling probabilities")
+print(f"{'Edge':<12} {'Weight':<10} {'Eff.Res.':<10} {'Score':<10} {'Prob':<10}")
+for i, j, w, r, s, p in sorted(edge_list, key=lambda x: -x[5]):
+    name_i = taxa[i]
+    name_j = taxa[j]
+    print(f"{name_i}-{name_j:<8} {w:<10.4f} {r:<10.4f} {s:<10.4f} {p:<10.4f}")
+
+# Step 5 - Sample edges to create sparsified graph
+# Keep a subset of edges by sampling based on probabilities
+# num_samples controls how sparse the result is
+num_samples = 20
+np.random.seed(42) 
+probs = np.array([e[5] for e in edge_list])
+indices = np.arange(len(edge_list))
+# Sample edges (with replacement, then reweight)
+sampled_indices = np.random.choice(indices, size=num_samples, p=probs, replace=True)
+# Build the sparsified adjacency matrix
+W_sparse = np.zeros((n, n))
+for s_idx in sampled_indices:
+    i, j, w, r, s, p = edge_list[s_idx]   
+    # Reweight: divide by (num_samples * probability) to preserve expected value
+    reweight = w / (num_samples * p)
+    W_sparse[i,j] += reweight
+    W_sparse[j,i] += reweight
+print("Step 5 - Sparsified adjacency matrix")
+print(np.round(W_sparse, 4))
+# Count how many unique edges survived
+surviving_edges = set()
+for s_idx in sampled_indices:
+    i, j = edge_list[s_idx][0], edge_list[s_idx][1]
+    surviving_edges.add((i,j))
+ 
+print(f"Original edges: {len(edge_list)}")
+print(f"Surviving unique edges: {len(surviving_edges)}")
+print(f"Edges removed: {len(edge_list) - len(surviving_edges)}")
+# Print surviving edges with species names
+print("Surviving edges:")
+for i, j in sorted(surviving_edges):
+    print(f"  {taxa[i]} — {taxa[j]}: {W_sparse[i,j]:.4f}")
