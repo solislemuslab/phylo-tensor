@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
 from scipy.linalg import pinv
+import networkx as nx
+import matplotlib.pyplot as plt
 df = pd.read_csv("cfs.csv") # reads the file
 #print(df.shape)
 #print(df.head())
@@ -193,3 +195,36 @@ print(f"Edges removed: {len(edge_list) - len(surviving_edges)}")
 print("Surviving edges:")
 for i, j in sorted(surviving_edges):
     print(f"  {taxa[i]} — {taxa[j]}: {W_sparse[i,j]:.4f}")
+
+
+G = nx.from_numpy_array(W_sparse)
+ 
+# Relabel nodes from numeric indices (0,1,2,...) to species names (t1, t2, t3,...)
+mapping = {i: taxa[i] for i in range(n)}
+G = nx.relabel_nodes(G, mapping)
+ 
+# Compute layout positions for nodes
+pos = nx.spring_layout(G, seed=42)  
+ 
+# Extract edge weights for visual encoding
+edges = G.edges(data=True)
+weights = [d['weight'] for (u, v, d) in edges]
+ 
+# Scale edge widths so the plot looks readable
+max_weight = max(weights) if weights else 1
+edge_widths = [3 * w / max_weight for w in weights]
+ 
+# Draw the graph
+plt.figure(figsize=(10, 8))
+nx.draw_networkx_nodes(G, pos, node_color='lightblue', node_size=800)
+nx.draw_networkx_labels(G, pos, font_size=10, font_weight='bold')
+nx.draw_networkx_edges(G, pos, width=edge_widths, edge_color='gray', alpha=0.7)
+ 
+# Add edge weight labels (rounded to 2 decimals for readability)
+edge_labels = {(u, v): f"{d['weight']:.2f}" for (u, v, d) in edges}
+nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8)
+ 
+plt.title(f"Sparsified Quartet Graph (num_samples = {num_samples})")
+plt.axis('off')
+plt.tight_layout()
+plt.show()
