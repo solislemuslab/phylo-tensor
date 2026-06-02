@@ -113,7 +113,7 @@ print("Step 1 - Collapsed adjacency matrix W (sum across all quartet layers)")
 print("Shape:", W.shape)
 print(W)
 
-# Step 2 - Compute the Laplacian matrix L from W and D \
+# Step 2 - Compute the Laplacian matrix L from W and D 
 # D is a diagonal matrix where D[i,i] = sum of all edge weights connected to node i
 D = np.diag(np.sum(W, axis=1))  # Degree matrix 
 L = D - W  # Unnormalized Laplacian
