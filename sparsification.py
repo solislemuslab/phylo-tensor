@@ -73,12 +73,9 @@ def build_tensor(df):
 # Sum across all quartet layers to get total pairwise support
 def collapse_tensor(T, method):
     if method == "sum":
-        W = np.sum(T, axis=2)   # shape: (n, n)
-        print("Step 1 - Collapsed adjacency matrix W (sum across all quartet layers)")
-        print("Shape:", W.shape)
-        print(W)
+        W = np.sum(T, axis=2)   
     elif method == "mean":
-        W = np.mean(T, axis=2)  # shape: (n, n)
+        W = np.mean(T, axis=2)  
     elif method == "max":
         W = np.max(T, axis=2)
 
@@ -87,7 +84,8 @@ def collapse_tensor(T, method):
 
     else:
         raise ValueError("Invalid method. Use 'sum', 'mean', 'max', or 'l2'.")
-    
+    print("Step 1 - Collapsed adjacency matrix W (sum across all quartet layers)")
+    print(W)
     return W
 
 

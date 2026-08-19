@@ -1,14 +1,6 @@
 import pandas as pd
 
-from sparsification import (
-    build_tensor,
-    collapse_tensor,
-    compute_laplacian,
-    compute_effective_resistance,
-    compute_edge_sampling_probabilities,
-    sample_edges,
-    visualize_graph
-)
+from sparsification import *
 
 df = pd.read_csv("cfs.csv")
 
