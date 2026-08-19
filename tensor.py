@@ -26,48 +26,11 @@ for i, taxon in enumerate(taxa):
     taxon_to_i[taxon] = i
 #print(taxon_to_i)
 
+# Creating the tensor
 T = np.zeros((n, n, q), dtype=float) #rows, columns, quartets
 #print(T.shape)
 
-#row = df.iloc[0]   # first quartet row
-#k = 0              # tensor layer 0
-# a = row["t1"]
-# b = row["t2"]
-# c = row["t3"]
-# d = row["t4"]
-#
-# print(a, b, c, d)
-#
-# ia = taxon_to_i[a]
-# ib = taxon_to_i[b]
-# ic = taxon_to_i[c]
-# id = taxon_to_i[d]
-# print(ia, ib, ic, id)
-#
-# cf12_34 = row["CF12_34"]
-# cf13_24 = row["CF13_24"]
-# cf14_23 = row["CF14_23"]
-# print(cf12_34, cf13_24, cf14_23, cf14_23)
-#
-# T[ia,ib,k] += cf12_34
-# T[ib,ia,k] += cf12_34
-# T[ic,id,k] += cf12_34
-# T[ic,id,k] += cf12_34
-#
-# T[ia,ic,k] += cf13_24
-# T[ic,ia,k] += cf13_24
-# T[ib,id,k] += cf13_24
-# T[id,ib,k] += cf13_24
-#
-# T[ia,id,k] += cf14_23
-# T[id,ia,k] += cf14_23
-# T[ib,ic,k] += cf14_23
-# T[ic,ib,k] += cf14_23
-#
-# print("Quartet:", a, b, c, d)
-# print(T[:, :, k])
-
-
+# Filling the tensor with quartet CFs
 for k,row in df.iterrows():
     a = row["t1"]
     b = row["t2"]
@@ -85,6 +48,8 @@ for k,row in df.iterrows():
     cf13_24 = row["CF13_24"]
     cf14_23 = row["CF14_23"]
     #print(cf12_34)
+
+    # Adds CF at index ia,ib,k... respectively
 
     T[ia,ib,k] += cf12_34
     T[ib,ia,k] += cf12_34
@@ -137,7 +102,7 @@ print("Step 3 — Effective resistance matrix R")
 print(np.round(R, 4))
 
 # Step 4 - Compute edge sampling probabilities
-# p[i,j] is proportional to w[i,j] * R[i,j]
+# p[i,j] is proportional to W[i,j] * R[i,j]
 # Edges that are both heavy AND structurally important get high probability
 scores = W * R 
 
@@ -146,7 +111,7 @@ total_score = 0
 edge_list = []
 for i in range(n):
     for j in range(i+1, n):
-        if W[i,j] > 0:
+        if W[i,j] > 0: # Redundant
             total_score += scores[i,j]
             edge_list.append((i, j, W[i,j], R[i,j], scores[i,j]))
 
