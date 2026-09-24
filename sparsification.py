@@ -66,7 +66,7 @@ def build_tensor(df):
 
         #print("Quartet:", a, b, c, d)
         #print(T[:, :, k])
-    print("Tensor shape:", T.shape)
+    #print("Tensor shape:", T.shape) uncomment after running the experiments
     return T, taxa
 
 # Step 1 - Collapsing the tensor across the quartet dimension to get a single adjacency matrix W
@@ -84,8 +84,9 @@ def collapse_tensor(T, method):
 
     else:
         raise ValueError("Invalid method. Use 'sum', 'mean', 'max', or 'l2'.")
-    print("Step 1 - Collapsed adjacency matrix W (sum across all quartet layers)")
-    print(W)
+    # Uncomment the following print statements after running the experiments
+    #print("Step 1 - Collapsed adjacency matrix W (sum across all quartet layers)")
+    #print(W)
     return W
 
 
@@ -94,10 +95,11 @@ def collapse_tensor(T, method):
 def compute_laplacian(W):
     D = np.diag(np.sum(W, axis=1))  # Degree matrix 
     L = D - W  # Unnormalized Laplacian
-    print("Step 2 - Graph Laplacian L = D - W")
-    print("Degree matrix diagonal:", np.diag(D))
-    print("Laplacian: ")
-    print(np.round(L, 4))
+    # Uncomment the following print statements after running the experiments
+    #print("Step 2 - Graph Laplacian L = D - W")
+    #print("Degree matrix diagonal:", np.diag(D))
+    #print("Laplacian: ")
+    #print(np.round(L, 4))
     
     return L
 
@@ -115,8 +117,9 @@ def compute_effective_resistance(L):
             R[i,j] = L_pinv[i,i] + L_pinv[j,j] - 2 * L_pinv[i,j]
             R[j,i] = R[i,j]  # symmetric
      
-    print("Step 3 — Effective resistance matrix R")
-    print(np.round(R, 4))
+    # Uncomment the following print statements after running the experiments
+    #print("Step 3 — Effective resistance matrix R")
+    #print(np.round(R, 4))
     
     return R
 
@@ -141,13 +144,13 @@ def compute_edge_sampling_probabilities(W, R, taxa):
         i, j, w, r, s = edge_list[idx]
         prob = s / total_score
         edge_list[idx] = (i, j, w, r, s, prob)
-
-    print("Step 4 - Edge sampling probabilities")
-    print(f"{'Edge':<12} {'Weight':<10} {'Eff.Res.':<10} {'Score':<10} {'Prob':<10}")
-    for i, j, w, r, s, p in sorted(edge_list, key=lambda x: -x[5]):
-        name_i = taxa[i]
-        name_j = taxa[j]
-        print(f"{name_i}-{name_j:<8} {w:<10.4f} {r:<10.4f} {s:<10.4f} {p:<10.4f}")
+    # Uncomment the following print statements after running the experiments
+    #print("Step 4 - Edge sampling probabilities")
+    #print(f"{'Edge':<12} {'Weight':<10} {'Eff.Res.':<10} {'Score':<10} {'Prob':<10}")
+    #for i, j, w, r, s, p in sorted(edge_list, key=lambda x: -x[5]):
+        #name_i = taxa[i]
+        #name_j = taxa[j]
+        #print(f"{name_i}-{name_j:<8} {w:<10.4f} {r:<10.4f} {s:<10.4f} {p:<10.4f}")
     return edge_list
 
 # Step 5 - Sample edges to create sparsified graph
@@ -167,27 +170,30 @@ def sample_edges(edge_list, num_samples, n, taxa,seed):
         reweight = w / (num_samples * p)
         W_sparse[i,j] += reweight
         W_sparse[j,i] += reweight
-    print("Step 5 - Sparsified adjacency matrix")
-    print(np.round(W_sparse, 4))
+    
+    # Uncomment the following print statements after running the experiments
+    #print("Step 5 - Sparsified adjacency matrix")
+    #print(np.round(W_sparse, 4))
     # Count how many unique edges survived
     surviving_edges = set()
     for s_idx in sampled_indices:
         i, j = edge_list[s_idx][0], edge_list[s_idx][1]
         surviving_edges.add((i,j))
-     
-    print(f"Original edges: {len(edge_list)}")
-    print(f"Surviving unique edges: {len(surviving_edges)}")
-    print(f"Edges removed: {len(edge_list) - len(surviving_edges)}")
+    # Uncomment the following print statements after running the experiments
+    #print(f"Original edges: {len(edge_list)}")
+    #print(f"Surviving unique edges: {len(surviving_edges)}")
+    #print(f"Edges removed: {len(edge_list) - len(surviving_edges)}")
     # Print surviving edges with species names
-    print("Surviving edges:")
-    for i, j in sorted(surviving_edges):
-        print(f"  {taxa[i]} — {taxa[j]}: {W_sparse[i,j]:.4f}")
+    # Uncomment the following print statements after running the experiments
+    #print("Surviving edges:")
+    #for i, j in sorted(surviving_edges):
+        #print(f"  {taxa[i]} — {taxa[j]}: {W_sparse[i,j]:.4f}")
     
     return W_sparse
 
 
 
-def visualize_graph(W_sparse, taxa, num_samples):
+def visualize_graph(W_sparse, taxa, num_samples, method):
     G = nx.from_numpy_array(W_sparse)
      
     # Relabel nodes from numeric indices (0,1,2,...) to species names (t1, t2, t3,...)
@@ -195,7 +201,10 @@ def visualize_graph(W_sparse, taxa, num_samples):
     G = nx.relabel_nodes(G, mapping)
      
     # Compute layout positions for nodes
-    pos = nx.spring_layout(G, seed=42)  
+    if num_samples < 11:
+        pos = nx.circular_layout(G)
+    else:
+        pos = nx.spring_layout(G, seed=42)
      
     # Extract edge weights for visual encoding
     edges = G.edges(data=True)
@@ -215,7 +224,7 @@ def visualize_graph(W_sparse, taxa, num_samples):
     edge_labels = {(u, v): f"{d['weight']:.2f}" for (u, v, d) in edges}
     nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8)
      
-    plt.title(f"Sparsified Quartet Graph (num_samples = {num_samples})")
+    plt.title(f"Sparsified Quartet Graph (num_samples = {num_samples}, method = {method})")
     plt.axis('off')
     plt.tight_layout()
     plt.show()
