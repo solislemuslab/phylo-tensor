@@ -157,11 +157,11 @@ def compute_edge_sampling_probabilities(W, R, taxa):
 # Keep a subset of edges by sampling based on probabilities
 # num_samples controls how sparse the result is
 def sample_edges(edge_list, num_samples, n, taxa,seed):
-    np.random.seed(seed) 
+    rng = np.random.default_rng(seed) 
     probs = np.array([e[5] for e in edge_list])
     indices = np.arange(len(edge_list))
     # Sample edges (with replacement, then reweight)
-    sampled_indices = np.random.choice(indices, size=num_samples, p=probs, replace=True)
+    sampled_indices = rng.choice(indices, size=num_samples, p=probs, replace=True)
     # Build the sparsified adjacency matrix
     W_sparse = np.zeros((n, n))
     for s_idx in sampled_indices:
@@ -193,7 +193,7 @@ def sample_edges(edge_list, num_samples, n, taxa,seed):
 
 
 
-def visualize_graph(W_sparse, taxa, num_samples, method):
+def visualize_graph(W_sparse, taxa, num_samples, method, seed):
     G = nx.from_numpy_array(W_sparse)
      
     # Relabel nodes from numeric indices (0,1,2,...) to species names (t1, t2, t3,...)
@@ -201,10 +201,7 @@ def visualize_graph(W_sparse, taxa, num_samples, method):
     G = nx.relabel_nodes(G, mapping)
      
     # Compute layout positions for nodes
-    if num_samples < 11:
-        pos = nx.circular_layout(G)
-    else:
-        pos = nx.spring_layout(G, seed=42)
+    pos = nx.circular_layout(taxa)
      
     # Extract edge weights for visual encoding
     edges = G.edges(data=True)
@@ -224,7 +221,7 @@ def visualize_graph(W_sparse, taxa, num_samples, method):
     edge_labels = {(u, v): f"{d['weight']:.2f}" for (u, v, d) in edges}
     nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=8)
      
-    plt.title(f"Sparsified Quartet Graph (num_samples = {num_samples}, method = {method})")
+    plt.title(f"Sparsified Quartet Graph (num_samples = {num_samples}, method = {method}, seed = {seed})")
     plt.axis('off')
     plt.tight_layout()
     plt.show()
