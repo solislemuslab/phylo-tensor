@@ -225,3 +225,46 @@ def visualize_graph(W_sparse, taxa, num_samples, method, seed):
     plt.axis('off')
     plt.tight_layout()
     plt.show()
+
+
+def plot_cf_vs_sparse_weights(df, W_sparse, taxa):
+    taxon_to_i = {
+        taxon: i for i, taxon in enumerate(taxa)
+    }
+
+    cf_values = []
+    sparse_weights = []
+
+    for _, row in df.iterrows():
+        a, b, c, d = row["t1"], row["t2"], row["t3"], row["t4"]
+
+        # Each split's CF contributes to two undirected edges
+        splits = [
+            (row["CF12_34"], [(a, b), (c, d)]),
+            (row["CF13_24"], [(a, c), (b, d)]),
+            (row["CF14_23"], [(a, d), (b, c)])
+        ]
+
+        for cf, pairs in splits:
+            for taxon1, taxon2 in pairs:
+                i = taxon_to_i[taxon1]
+                j = taxon_to_i[taxon2]
+
+                cf_values.append(cf)
+                sparse_weights.append(W_sparse[i, j])
+
+    plt.figure(figsize=(10, 6))
+    plt.scatter(
+        cf_values,
+        sparse_weights,
+        s=25,
+        color="steelblue"
+    )
+
+    plt.xlabel("Individual quartet concordance factor")
+    plt.ylabel("Mean Sparsified edge weight")
+    plt.title("Quartet CF vs. Mean Sparsified Edge Weight")
+    plt.xlim(-0.02, 1.02)
+    plt.grid(alpha=0.2)
+    plt.tight_layout()
+    plt.show()
