@@ -268,3 +268,64 @@ def plot_cf_vs_sparse_weights(df, W_sparse, taxa):
     plt.grid(alpha=0.2)
     plt.tight_layout()
     plt.show()
+
+
+def min_max_plot_cf_vs_sparse_weights(df, W_sparse, taxa):
+    taxon_to_i = {taxon: i for i, taxon in enumerate(taxa)}
+    cf_by_edge = {}
+
+    for _, row in df.iterrows():
+        a, b, c, d = row["t1"], row["t2"], row["t3"], row["t4"]
+
+        splits = [
+            (row["CF12_34"], [(a, b), (c, d)]),
+            (row["CF13_24"], [(a, c), (b, d)]),
+            (row["CF14_23"], [(a, d), (b, c)])
+        ]
+
+        for cf, pairs in splits:
+            for taxon1, taxon2 in pairs:
+                edge = tuple(sorted([
+                    taxon_to_i[taxon1],
+                    taxon_to_i[taxon2]
+                ]))
+                cf_by_edge.setdefault(edge, []).append(cf)
+
+    means, minimums, maximums, weights = [], [], [], []
+
+    for (i, j), values in cf_by_edge.items():
+        means.append(np.mean(values))
+        minimums.append(np.min(values))
+        maximums.append(np.max(values))
+        weights.append(W_sparse[i, j])
+
+    means = np.array(means)
+
+    # Distances from the mean to each endpoint
+    x_errors = np.array([
+        means - np.array(minimums),
+        np.array(maximums) - means
+    ])
+
+    plt.figure(figsize=(10, 6))
+    plt.errorbar(
+        means,
+        weights,
+        xerr=x_errors,
+        fmt="o",
+        color="steelblue",
+        ecolor="gray",
+        markersize=5,
+        elinewidth=1,
+        capsize=3,
+        label="Dot: mean CF; line: min-max CF"
+    )
+
+    plt.xlabel("Quartet concordance factor (mean and min-max)")
+    plt.ylabel("Mean sparsified edge weight across seeds")
+    plt.title("CF Range per Pair vs. Mean Sparsified Edge Weight")
+    plt.xlim(-0.02, 1.02)
+    plt.grid(alpha=0.2)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
