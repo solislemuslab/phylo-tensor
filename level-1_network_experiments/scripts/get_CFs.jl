@@ -6,28 +6,8 @@ using DataFrames
 using CSV
 
 
-simulation_dir = "./sims/nets/"
+simulation_dir = joinpath(@__DIR__, "..", "sims_2.2", "nets")
 sim_folders = filter(isdir, readdir(simulation_dir, join=true))
-
-
-for folder in sim_folders
-    println(folder)
-    net = readnewick(folder*"/net.tre")
-    dat_CF = SNaQ.computeexpectedDataCF(net) #compute expected CFs
-    df= DataFrame(tablequartetCF(dat_CF)) #convert to a DF 
-    CSV.write(folder*"/CFs.csv",df)
-
-    #compute the amount of ILS. Here we compute the deviation of the expected CFs from what we'd expect the CFs to be with no ILS
-    #Formally this is average normalized manhatten distance across CFs
-    #We 'cheat' on computing the no-ILS case so really it is an approximation
-    ILS_deviation = compute_ILS_deviation(net)
-    #save result
-    open(folder*"/mean_ils_distance.txt", "w") do io
-        write(io, string(ILS_deviation))
-    end
-end
-
-# end
 
 #Not deviation from the No ILS expectation measures the amount of ILS
 #This 'cheats' at computing the no ILS expectation by set branches to be long s.t. not coalescing is extremely unlikely
@@ -51,3 +31,23 @@ function compute_ILS_deviation(net)
 
     mean_tv = sum(merged_df.tv)/nrow(merged_df)
 end
+
+for folder in sim_folders
+    println(folder)
+    net = readnewick(folder*"/net.tre")
+    dat_CF = SNaQ.computeexpectedDataCF(net) #compute expected CFs
+    df= DataFrame(tablequartetCF(dat_CF)) #convert to a DF 
+    CSV.write(folder*"/CFs.csv",df)
+
+    #compute the amount of ILS. Here we compute the deviation of the expected CFs from what we'd expect the CFs to be with no ILS
+    #Formally this is average normalized manhatten distance across CFs
+    #We 'cheat' on computing the no-ILS case so really it is an approximation
+    ILS_deviation = compute_ILS_deviation(net)
+    #save result
+    open(folder*"/mean_ils_distance.txt", "w") do io
+        write(io, string(ILS_deviation))
+    end
+end
+
+
+
